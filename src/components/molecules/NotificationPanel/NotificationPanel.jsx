@@ -1,18 +1,23 @@
-// src/components/molecules/NotificationPanel/NotificationPanel.jsx
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Divider } from '@mui/material';
 import Badge from '../../atoms/Badge/Badge';
 
 const NotificationPanel = ({ notifications }) => {
   return (
     <Box>
-      <Typography variant="h6">Notificações</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+          Notificações
+        </Typography>
+        {notifications.length > 0 && <Badge count={notifications.length} />}
+      </Box>
       <Box sx={{ marginTop: 2 }}>
         {notifications.length > 0 ? (
-          notifications.map((notification) => (
-            <Typography key={notification.id} variant="body2">
-              {notification.message}
-            </Typography>
+          notifications.map((notification, index) => (
+            <Box key={notification.id} sx={{ paddingY: 1 }}>
+              <Typography variant="body2">{notification.message}</Typography>
+              {index < notifications.length - 1 && <Divider sx={{ marginY: 1 }} />}
+            </Box>
           ))
         ) : (
           <Typography variant="body2" color="text.secondary">
@@ -20,7 +25,6 @@ const NotificationPanel = ({ notifications }) => {
           </Typography>
         )}
       </Box>
-      <Badge count={notifications.length} />
     </Box>
   );
 };

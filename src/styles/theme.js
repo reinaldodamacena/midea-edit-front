@@ -1,4 +1,3 @@
-// src/styles/theme.js
 import { createTheme } from '@mui/material/styles';
 
 // Tokens Globais
@@ -22,8 +21,8 @@ const sharedTokens = {
 const palettes = {
   light: {
     mode: 'light',
-    primary: { main: '#6A1B9A', contrastText: '#FFFFFF' }, // Roxo Adobe Premiere
-    secondary: { main: '#0288D1', contrastText: '#FFFFFF' }, // Azul Adobe Premiere
+    primary: { main: '#6A1B9A', contrastText: '#FFFFFF' },
+    secondary: { main: '#0288D1', contrastText: '#FFFFFF' },
     background: { default: '#EAEAEA', paper: '#FFFFFF' },
     text: { primary: '#333333', secondary: '#666666', disabled: '#BDBDBD' },
     success: { main: '#4CAF50', contrastText: '#FFFFFF' },
@@ -33,9 +32,9 @@ const palettes = {
   },
   dark: {
     mode: 'dark',
-    primary: { main: '#8E24AA', contrastText: '#FFFFFF' }, // Roxo Adobe Premiere
-    secondary: { main: '#1976D2', contrastText: '#FFFFFF' }, // Azul Adobe Premiere
-    background: { default: '#1E1E1E', paper: '#252525' }, // Preto suave para evitar cansaço visual
+    primary: { main: '#8E24AA', contrastText: '#FFFFFF' },
+    secondary: { main: '#1976D2', contrastText: '#FFFFFF' },
+    background: { default: '#1E1E1E', paper: '#252525' },
     text: { primary: '#FFFFFF', secondary: '#BDBDBD', disabled: '#757575' },
     success: { main: '#81C784', contrastText: '#000000' },
     warning: { main: '#FFB74D', contrastText: '#000000' },
@@ -69,6 +68,27 @@ const componentOverrides = (theme) => ({
         '&:disabled': {
           backgroundColor: theme.palette.text.disabled,
           color: theme.palette.text.primary,
+        },
+      },
+    },
+  },
+  MuiTextField: {
+    styleOverrides: {
+      root: {
+        '& .MuiOutlinedInput-root': {
+          borderRadius: theme.shape.borderRadius,
+          '& fieldset': {
+            borderColor: theme.palette.divider,
+          },
+          '&:hover fieldset': {
+            borderColor: theme.palette.primary.main,
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: theme.palette.primary.main,
+          },
+        },
+        '& .MuiInputBase-input': {
+          padding: theme.spacing(2),
         },
       },
     },

@@ -1,22 +1,32 @@
 import React from 'react';
-import { Box, Grid, Divider } from '@mui/material';
+import { Box, Grid, Typography } from '@mui/material';
 import TimelinePanel from '../../organisms/TimelinePanel/TimelinePanel';
 import MediaControlPanel from '../../organisms/MediaControlPanel/MediaControlPanel';
 import NotificationPanelOrganism from '../../organisms/NotificationPanelOrganism/NotificationPanelOrganism';
+import VideoPlayer from '../../molecules/VideoPlayer/VideoPlayer';
+import Sidebar from '../../organisms/Sidebar/Sidebar';
 
 const EditTemplate = ({
   cuts,
   currentTime,
   duration,
   notifications,
+  videos,
+  selectedVideo,
   onPlayPause,
   onStop,
   onEditCut,
   onWatchCut,
+  onDeleteVideo,
+  onSelectVideo,
+  onCutVideo,
+  onMoveClip,
+  onResizeClip,
+  onUpdateTime,
 }) => {
   return (
     <Grid container sx={{ height: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
-      {/* Barra Lateral */}
+      {/* Sidebar com Arquivos de Vídeo */}
       <Grid
         item
         xs={2}
@@ -24,17 +34,17 @@ const EditTemplate = ({
           backgroundColor: 'background.paper',
           borderRight: '1px solid',
           borderColor: 'divider',
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
         }}
       >
-        <Box sx={{ padding: 2 }}>
-          <h4>Ferramentas</h4>
-          {/* Aqui podemos adicionar botões de funcionalidades */}
-        </Box>
+        <Sidebar videos={videos} onSelectVideo={onSelectVideo} onDeleteVideo={onDeleteVideo} />
       </Grid>
 
       {/* Área Principal */}
       <Grid item xs={10} sx={{ display: 'flex', flexDirection: 'column' }}>
-        {/* Área de Preview */}
+        {/* Player de Vídeo */}
         <Box
           sx={{
             flex: 2,
@@ -47,21 +57,13 @@ const EditTemplate = ({
             borderColor: 'divider',
           }}
         >
-          <Box
-            sx={{
-              width: '80%',
-              height: '60%',
-              backgroundColor: 'black', // Placeholder para o preview
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: 2,
-              boxShadow: 1,
-            }}
-          >
-            {/* Aqui deve ser integrado o player de vídeo */}
-            <span style={{ color: 'white' }}>Preview do Vídeo</span>
-          </Box>
+          {selectedVideo ? (
+            <VideoPlayer url={selectedVideo.url} currentTime={currentTime} duration={selectedVideo.duration} />
+          ) : (
+            <Typography variant="h6" color="text.secondary">
+              Nenhum vídeo selecionado
+            </Typography>
+          )}
         </Box>
 
         {/* Controles de Reprodução */}
@@ -70,6 +72,9 @@ const EditTemplate = ({
             padding: 2,
             borderBottom: '1px solid',
             borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
           <MediaControlPanel
@@ -81,27 +86,28 @@ const EditTemplate = ({
         </Box>
 
         {/* Timeline */}
-        <Box sx={{ flex: 1, padding: 2 }}>
-          <TimelinePanel cuts={cuts} onEdit={onEditCut} onWatch={onWatchCut} />
+        <Box
+          sx={{
+            flex: 1,
+            padding: 2,
+            backgroundColor: 'background.default',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <TimelinePanel
+            videos={videos}
+            cuts={cuts}
+            currentTime={currentTime}
+            onUpdateTime={onUpdateTime}
+            onMoveClip={onMoveClip}
+            onResizeClip={onResizeClip}
+            onCutClip={onCutVideo}
+          />
         </Box>
       </Grid>
 
-      {/* Painel de Notificações */}
-      <Grid
-        item
-        xs={12}
-        sx={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          width: '100%',
-          backgroundColor: 'background.paper',
-          boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.1)',
-          padding: 2,
-        }}
-      >
-        <NotificationPanelOrganism notifications={notifications} />
-      </Grid>
+      
     </Grid>
   );
 };
