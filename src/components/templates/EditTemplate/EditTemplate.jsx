@@ -66,25 +66,6 @@ const EditTemplate = ({
           )}
         </Box>
 
-        {/* Controles de Reprodução */}
-        <Box
-          sx={{
-            padding: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <MediaControlPanel
-            currentTime={currentTime}
-            duration={duration}
-            onPlayPause={onPlayPause}
-            onStop={onStop}
-          />
-        </Box>
-
         {/* Timeline */}
         <Box
           sx={{

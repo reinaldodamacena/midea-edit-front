@@ -23,10 +23,6 @@ const ToolBarActions = React.memo(({
         gap: 2,
         padding: 2,
         backgroundColor: 'background.paper',
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 2,
-        boxShadow: 1,
       }}
     >
       {/* Controles de Reprodução */}

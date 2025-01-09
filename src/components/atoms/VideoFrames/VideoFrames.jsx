@@ -16,14 +16,14 @@ const VideoFrames = React.memo(({ videoUrl, zoom = 1, height = 80, boxWidth = 60
 
       video.onloadedmetadata = () => {
         const duration = video.duration;
-        const totalFrames = Math.ceil((boxWidth / 120) * zoom); // Calcula o total de frames com base no zoom e largura disponível
-        const frameWidth = boxWidth / totalFrames; // Largura proporcional para cada frame
+        const totalFrames = Math.ceil((boxWidth * zoom) / 120); // Calcula o total de frames ajustado ao zoom
+        const frameWidth = (boxWidth * zoom) / totalFrames; // Ajusta a largura de cada frame proporcional ao zoom
 
-        canvas.width = boxWidth;
+        canvas.width = boxWidth * zoom; // Canvas ajustado ao zoom
         canvas.height = height;
 
         let currentTime = 0;
-        const interval = duration / totalFrames; // Intervalo de tempo entre os frames
+        const interval = duration / totalFrames; // Intervalo de tempo entre frames
 
         const drawFrame = () => {
           video.currentTime = currentTime;
@@ -31,7 +31,7 @@ const VideoFrames = React.memo(({ videoUrl, zoom = 1, height = 80, boxWidth = 60
           video.addEventListener(
             'seeked',
             function handler() {
-              const x = (currentTime / duration) * boxWidth; // Posiciona o frame no espaço proporcional
+              const x = (currentTime / duration) * (boxWidth * zoom); // Posiciona o frame proporcional ao zoom
               context.clearRect(x, 0, frameWidth, height); // Limpa antes de desenhar
               context.drawImage(video, x, 0, frameWidth, height); // Renderiza o frame
               currentTime += interval; // Incrementa o tempo
@@ -56,7 +56,7 @@ const VideoFrames = React.memo(({ videoUrl, zoom = 1, height = 80, boxWidth = 60
     <Box
       sx={{
         position: 'relative',
-        width: `${boxWidth}px`,
+        width: `${boxWidth * zoom}px`, // Ajusta a largura proporcional ao zoom
         height: `${height}px`,
         backgroundColor: theme.palette.background.default,
         border: `1px solid ${theme.palette.divider}`,
