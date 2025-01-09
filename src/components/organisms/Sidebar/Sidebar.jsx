@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, List, ListItem, ListItemIcon, ListItemText, Typography } from '@mui/material';
+import { Box, List, ListItemIcon, ListItemText, Typography, ListItemButton } from '@mui/material';
 import Divider from '../../atoms/Divider/Divider';
 import IconButton from '../../atoms/IconButton/IconButton';
 import Icon from '../../atoms/Icon/Icon';
@@ -30,12 +30,12 @@ const Sidebar = ({ videos, onSelectVideo, onDeleteVideo }) => {
       <Box>
         <List>
           {menuItems.map((item, index) => (
-            <ListItem button component={Link} to={item.link} key={index}>
+            <ListItemButton button component={Link} to={item.link} key={index}>
               <ListItemIcon>
                 <Icon name={item.name} size={24} />
               </ListItemIcon>
               <ListItemText primary={item.label} />
-            </ListItem>
+            </ListItemButton >
           ))}
         </List>
         <Divider />
@@ -49,13 +49,10 @@ const Sidebar = ({ videos, onSelectVideo, onDeleteVideo }) => {
         <List>
           {videos && videos.length > 0 ? (
             videos.map((video, index) => (
-              <ListItem
-                button
+              <ListItemButton
                 key={index}
                 onClick={() => onSelectVideo(video)}
-                sx={{
-                  '&:hover': { backgroundColor: 'action.hover' },
-                }}
+                sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
               >
                 <ListItemText primary={video.name} />
                 <IconButton
@@ -67,7 +64,7 @@ const Sidebar = ({ videos, onSelectVideo, onDeleteVideo }) => {
                 >
                   <Icon name="Delete" size={20} />
                 </IconButton>
-              </ListItem>
+              </ListItemButton>
             ))
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -75,8 +72,8 @@ const Sidebar = ({ videos, onSelectVideo, onDeleteVideo }) => {
             </Typography>
           )}
         </List>
-      </Box>
-    </Box>
+      </Box >
+    </Box >
   );
 };
 

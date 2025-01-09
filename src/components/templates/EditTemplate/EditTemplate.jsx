@@ -1,94 +1,151 @@
-import React from 'react';
-import { Box, Grid, Typography } from '@mui/material';
-import TimelinePanel from '../../organisms/TimelinePanel/TimelinePanel';
-import MediaControlPanel from '../../organisms/MediaControlPanel/MediaControlPanel';
-import NotificationPanelOrganism from '../../organisms/NotificationPanelOrganism/NotificationPanelOrganism';
-import VideoPlayer from '../../molecules/VideoPlayer/VideoPlayer';
+// src/components/templates/EditTemplate/EditTemplate.jsx
+import React, { useState } from 'react';
+import { Grid, Box, Typography } from '@mui/material';
 import Sidebar from '../../organisms/Sidebar/Sidebar';
+import TimelinePanel from '../../organisms/TimelinePanel/TimelinePanel';
+import DoubleBufferPlayer from '../../molecules/DoubleBufferPlayer/DoubleBufferPlayer';
 
-const EditTemplate = ({
-  cuts,
-  currentTime,
-  duration,
-  notifications,
-  videos,
-  selectedVideo,
-  onPlayPause,
-  onStop,
-  onEditCut,
-  onWatchCut,
-  onDeleteVideo,
-  onSelectVideo,
-  onCutVideo,
-  onMoveClip,
-  onResizeClip,
-  onUpdateTime,
-}) => {
+const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cuts }) => {
+  // Em vez de usar 'videos' direto, guardamos no state para reorder
+  const [videos, setVideos] = useState(initialVideos);
+
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [zoom, setZoom] = useState(50);
+
+  const totalDuration = videos.reduce((acc, v) => acc + (v.duration || 0), 0);
+
+  const handlePlay = () => setIsPlaying(true);
+  const handlePause = () => setIsPlaying(false);
+
+  const handleUpdateTime = (newTime) => {
+    if (newTime >= totalDuration) {
+      setIsPlaying(false);
+      setCurrentTime(totalDuration);
+    } else {
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleProgress = (globalTime) => {
+    if (globalTime >= totalDuration) {
+      setIsPlaying(false);
+      setCurrentTime(totalDuration);
+    } else {
+      setCurrentTime(globalTime);
+    }
+  };
+
+  const handleEndedAll = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  // callback: reorder (chega do DraggableTimeline -> TimelinePanel)
+  const handleReorder = (newList) => {
+    setVideos(newList);
+  };
+
   return (
-    <Grid container sx={{ height: '100vh', bgcolor: 'background.default', color: 'text.primary' }}>
-      {/* Sidebar com Arquivos de Vídeo */}
+    <Grid
+      container
+      sx={{
+        height: '100vh',
+        bgcolor: 'background.default',
+        color: 'text.primary',
+      }}
+    >
+      {/* Sidebar */}
       <Grid
         item
         xs={2}
         sx={{
           backgroundColor: 'background.paper',
-          borderRight: '1px solid',
+          borderRight: 1,
           borderColor: 'divider',
+          boxShadow: 2,
           display: 'flex',
           flexDirection: 'column',
-          overflowY: 'auto',
         }}
       >
-        <Sidebar videos={videos} onSelectVideo={onSelectVideo} onDeleteVideo={onDeleteVideo} />
+        <Sidebar
+          videos={videos}
+          onSelectVideo={onSelectVideo}
+          onDeleteVideo={onDeleteVideo}
+        />
       </Grid>
 
-      {/* Área Principal */}
-      <Grid item xs={10} sx={{ display: 'flex', flexDirection: 'column' }}>
-        {/* Player de Vídeo */}
+      {/* Área principal */}
+      <Grid
+        item
+        xs={10}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: 'background.default',
+        }}
+      >
+        {/* Player */}
         <Box
           sx={{
             flex: 2,
-            padding: 2,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            backgroundColor: 'background.paper',
-            borderBottom: '1px solid',
+            p: 2,
+            borderBottom: 1,
             borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: 2,
           }}
         >
-          {selectedVideo ? (
-            <VideoPlayer url={selectedVideo.url} currentTime={currentTime} duration={selectedVideo.duration} />
-          ) : (
+          {!videos.length ? (
             <Typography variant="h6" color="text.secondary">
-              Nenhum vídeo selecionado
+              Nenhum vídeo disponível
             </Typography>
+          ) : (
+            <Box
+              sx={{
+                width: '80%',
+                height: '80%',
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: 3,
+              }}
+            >
+              <DoubleBufferPlayer
+                videos={videos}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                onProgress={handleProgress}
+                onEndedAll={handleEndedAll}
+                width="100%"
+                height="100%"
+              />
+            </Box>
           )}
         </Box>
 
         {/* Timeline */}
         <Box
           sx={{
-            flex: 1,
-            padding: 2,
-            backgroundColor: 'background.default',
-            borderTop: '1px solid',
-            borderColor: 'divider',
+            flex: 0,
+            p: 1,
           }}
         >
           <TimelinePanel
             videos={videos}
             cuts={cuts}
             currentTime={currentTime}
-            onUpdateTime={onUpdateTime}
-            onMoveClip={onMoveClip}
-            onResizeClip={onResizeClip}
-            onCutClip={onCutVideo}
+            zoom={zoom}
+            isPlaying={isPlaying}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onChangeZoom={setZoom}
+            onUpdateTime={handleUpdateTime}
+            onReorder={handleReorder} 
           />
         </Box>
       </Grid>
-
-      
     </Grid>
   );
 };

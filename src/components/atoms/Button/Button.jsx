@@ -13,7 +13,10 @@ const StyledButton = styled(MuiButton)(({ theme }) => ({
   },
 }));
 
-const Button = ({ children, ...props }) => {
+const Button = ({ children, button, ...props }) => {
+  // "button" não será repassada ao StyledButton
+  // pois a removemos do ...props
+  // Se precisar usar "button" internamente, você pode logicar aqui
   return <StyledButton {...props}>{children}</StyledButton>;
 };
 

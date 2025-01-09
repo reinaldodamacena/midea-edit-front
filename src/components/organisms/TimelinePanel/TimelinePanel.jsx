@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
+// src/components/organisms/TimelinePanel/TimelinePanel.jsx
+import React from 'react';
 import { Box, useTheme } from '@mui/material';
-import Timeline from '../../molecules/Timeline/Timeline';
 import ToolBarActions from '../../molecules/ToolBarActions/ToolBarActions';
+import DraggableTimeline from '../../molecules/DraggableTimeline/DraggableTimeline';
 
-const TimelinePanel = ({ videos, onPlay, onPause, onMoveClip }) => {
-  const [zoom, setZoom] = useState(1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0); // Tempo atual
+const TimelinePanel = ({
+  videos,
+  cuts,
+  currentTime,
+  zoom,
+  isPlaying,
+  onPlay,
+  onPause,
+  onChangeZoom,
+  onUpdateTime,
+  onReorder, // Nova prop para reorder
+}) => {
   const theme = useTheme();
 
   return (
@@ -14,33 +23,24 @@ const TimelinePanel = ({ videos, onPlay, onPause, onMoveClip }) => {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100%',
         backgroundColor: theme.palette.background.default,
       }}
     >
-      {/* Toolbar */}
       <ToolBarActions
-        onPlay={() => {
-          setIsPlaying(true);
-          onPlay();
-        }}
-        onPause={() => {
-          setIsPlaying(false);
-          onPause();
-        }}
-        zoomLevel={zoom}
-        onZoomIn={() => setZoom((prev) => Math.min(prev + 0.5, 5))}
-        onZoomOut={() => setZoom((prev) => Math.max(prev - 0.5, 0.5))}
-        onChangeZoom={setZoom}
+        onPlay={onPlay}
+        onPause={onPause}
         isPlaying={isPlaying}
+        zoomLevel={zoom}
+        onChangeZoom={onChangeZoom}
       />
 
-      {/* Timeline */}
-      <Timeline
+      <DraggableTimeline
         videos={videos}
-        zoom={zoom}
         currentTime={currentTime}
-        onMoveClip={onMoveClip}
+        zoom={zoom}
+        onScrub={onUpdateTime}
+        onReorder={onReorder}
       />
     </Box>
   );

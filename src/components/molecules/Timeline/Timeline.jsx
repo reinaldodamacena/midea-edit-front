@@ -1,35 +1,38 @@
+// src/components/molecules/Timeline/Timeline.jsx
 import React, { useMemo } from 'react';
 import { Box, useTheme } from '@mui/material';
 import VideoFrames from '../../atoms/VideoFrames/VideoFrames';
-import TimeRuler from '../../molecules/TimeRuler/TimeRuler';
+import TimeRuler from '../TimeRuler/TimeRuler';
 
-const Timeline = React.memo(({ videos, zoom, currentTime, onMoveClip }) => {
+const Timeline = React.memo(({
+  videos,
+  zoom = 50,
+  currentTime = 0,
+  onUpdateTime, // callback
+}) => {
   const theme = useTheme();
 
-  // Duração total da timeline
-  const totalDuration = useMemo(
-    () => videos.reduce((sum, video) => sum + video.duration, 0),
-    [videos]
-  );
+  const normalizedZoom = zoom / 100;
+  const totalDuration = useMemo(() => {
+    if (!videos?.length) return 0;
+    return videos.reduce((sum, v) => sum + (v.duration || 0), 0);
+  }, [videos]);
 
-  // Largura total da timeline com base no zoom
-  const totalWidth = useMemo(() => totalDuration * zoom * 120, [totalDuration, zoom]);
+  const totalWidth = useMemo(() => {
+    if (totalDuration <= 0) return 0;
+    return totalDuration * normalizedZoom * 100;
+  }, [totalDuration, normalizedZoom]);
 
-  // Calcula a largura de cada vídeo com base no zoom
-  const videoWidths = useMemo(
-    () => videos.map((video) => (video.duration / totalDuration) * totalWidth),
-    [videos, totalDuration, totalWidth]
-  );
+  const videoWidths = useMemo(() => {
+    if (!videos?.length || totalDuration === 0) return [];
+    return videos.map((vid) => {
+      const frac = vid.duration / totalDuration;
+      return frac * totalWidth;
+    });
+  }, [videos, totalDuration, totalWidth]);
 
-  const handleDragStart = (e, videoId) => {
-    e.dataTransfer.setData('videoId', videoId);
-  };
-
-  const handleDrop = (e, targetPosition) => {
-    const videoId = e.dataTransfer.getData('videoId');
-    if (videoId && onMoveClip) {
-      onMoveClip(videoId, targetPosition); // Move o clipe para a posição desejada
-    }
+  const handleScrub = (newTime) => {
+    onUpdateTime?.(newTime);
   };
 
   return (
@@ -40,9 +43,9 @@ const Timeline = React.memo(({ videos, zoom, currentTime, onMoveClip }) => {
         flexDirection: 'column',
         gap: 1,
         padding: 1,
-        height: 'auto',
         backgroundColor: theme.palette.background.paper,
         overflowX: 'auto',
+        border: `1px solid ${theme.palette.divider}`,
       }}
     >
       {/* TimeRuler */}
@@ -50,41 +53,37 @@ const Timeline = React.memo(({ videos, zoom, currentTime, onMoveClip }) => {
         duration={totalDuration}
         zoom={zoom}
         currentTime={currentTime}
-        boxWidth={totalWidth} // Largura total sincronizada
+        boxWidth={totalWidth}
+        onScrub={handleScrub}
       />
 
-      {/* Renderiza os Clipes */}
+      {/* Lista de vídeos (frames) */}
       <Box
         sx={{
           display: 'flex',
-          position: 'relative',
           gap: 0,
           padding: 0,
+          width: `${totalWidth}px`,
+          overflow: 'hidden',
+          backgroundColor: theme.palette.background.default,
         }}
       >
-        {videos.map((video, index) => (
+        {videos.map((video, idx) => (
           <Box
             key={video.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, video.id)}
-            onDragOver={(e) => e.preventDefault()} // Permite o drop
-            onDrop={(e) => handleDrop(e, video.startTime)} // Calcula o Snap
             sx={{
               position: 'relative',
-              width: `${videoWidths[index]}px`, // Largura proporcional
+              width: `${videoWidths[idx]}px`,
+              height: '100px',
               border: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.background.default,
+              backgroundColor: theme.palette.background.paper,
               boxShadow: theme.shadows[1],
-              cursor: 'grab',
-              '&:hover': {
-                boxShadow: theme.shadows[4],
-              },
             }}
           >
             <VideoFrames
               videoUrl={video.url}
               zoom={zoom}
-              boxWidth={videoWidths[index]} // Passa a largura sincronizada ao zoom
+              boxWidth={videoWidths[idx]}
             />
           </Box>
         ))}

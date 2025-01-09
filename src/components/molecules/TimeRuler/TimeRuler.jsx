@@ -1,102 +1,179 @@
-import React, { useMemo } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
+import throttle from 'lodash/throttle';
 
-const TimeRuler = React.memo(({ duration = 0, zoom = 1, currentTime = 0, boxWidth = 600 }) => {
+const TimeRuler = React.memo(({
+  duration = 0,
+  zoom = 50,
+  currentTime = 0,
+  boxWidth = 600,
+  onScrub,
+}) => {
   const theme = useTheme();
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const rulerRef = useRef(null);
 
-  // Define o intervalo entre marcadores com base no zoom
+  const throttledScrub = useRef(
+    throttle((time) => {
+      onScrub?.(time);
+    }, 80)
+  ).current;
+
   const markerInterval = useMemo(() => {
-    if (zoom >= 3) return 0.1; // Milissegundos (100ms)
-    if (zoom >= 2) return 1; // Segundos
-    if (zoom >= 1) return 10; // A cada 10 segundos
-    return 20; // A cada 20 segundos
+    if (zoom >= 75) return 0.5;
+    if (zoom >= 50) return 1;
+    if (zoom >= 25) return 5;
+    return 10;
   }, [zoom]);
 
-  // Gera os marcadores baseados na duração total e no intervalo
   const markers = useMemo(() => {
-    if (duration <= 0) return []; // Evita problemas com duração zero
-    return Array.from(
-      { length: Math.ceil(duration / markerInterval) + 1 },
-      (_, i) => i * markerInterval
-    );
+    if (duration <= 0) return [];
+    const num = Math.ceil(duration / markerInterval);
+    return Array.from({ length: num + 1 }, (_, i) => i * markerInterval);
   }, [duration, markerInterval]);
 
-  // Calcula a posição do indicador de tempo atual
+  const minorTickInterval = markerInterval / 10;
+  const minorTicks = useMemo(() => {
+    if (duration <= 0 || minorTickInterval <= 0) return [];
+    const numTicks = Math.ceil(duration / minorTickInterval);
+    return Array.from({ length: numTicks + 1 }, (_, i) => i * minorTickInterval);
+  }, [duration, minorTickInterval]);
+
+  const calcTimeFromX = (clientX) => {
+    if (!rulerRef.current || duration <= 0) return 0;
+    const rect = rulerRef.current.getBoundingClientRect();
+    const relativeX = clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(relativeX, boxWidth));
+    return (clampedX / boxWidth) * duration;
+  };
+
   const currentTimePosition = useMemo(() => {
-    if (duration <= 0) return 0; // Evita divisão por zero
-    return (currentTime / duration) * (boxWidth * zoom);
-  }, [currentTime, duration, boxWidth, zoom]);
+    if (isDragging) return dragX;
+    if (duration > 0) {
+      return (currentTime / duration) * boxWidth;
+    }
+    return 0;
+  }, [isDragging, dragX, currentTime, duration, boxWidth]);
+
+  const handleClick = (e) => {
+    if (!onScrub) return;
+    const newTime = calcTimeFromX(e.clientX);
+    onScrub(newTime);
+  };
+
+  const handleMouseDown = (e) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    setDragX(e.clientX - rulerRef.current.getBoundingClientRect().left);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    const newX = e.clientX - rulerRef.current.getBoundingClientRect().left;
+    setDragX(newX);
+    throttledScrub(calcTimeFromX(e.clientX));
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   return (
     <Box
+      ref={rulerRef}
       sx={{
         position: 'relative',
-        width: `${boxWidth * zoom}px`, // Largura proporcional ao zoom
-        height: '60px',
-        backgroundColor: theme.palette.background.paper,
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'flex-end',
+        width: `${boxWidth}px`,
+        height: '50px',
+        // Gradiente sutil
+        background: `linear-gradient(90deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
         borderBottom: `1px solid ${theme.palette.divider}`,
+        display: 'flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+        userSelect: 'none',
+        boxShadow: theme.shadows[2],
       }}
+      onClick={handleClick}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
     >
-      {/* Renderização dos Marcadores de Tempo */}
-      {markers.map((marker, index) => {
-        const isMajorMarker = Math.round(marker * 10) % 10 === 0; // Marcadores principais são múltiplos de 10
-        const left = `${(marker / duration) * (boxWidth * zoom)}px`; // Posição ajustada com base no zoom e duração
-
+      {/* Minor ticks */}
+      {minorTicks.map((tick) => {
+        const left = (tick / duration) * boxWidth;
         return (
           <Box
-            key={index}
+            key={`minor-${tick}`}
             sx={{
               position: 'absolute',
-              left: left,
+              left: `${left}px`,
+              height: '8px',
+              width: '1px',
+              bottom: 10,
+              backgroundColor: theme.palette.divider,
+              transform: 'translateX(-50%)',
+            }}
+          />
+        );
+      })}
+
+      {/* Major markers */}
+      {markers.map((marker) => {
+        const left = (marker / duration) * boxWidth;
+        return (
+          <Box
+            key={`major-${marker}`}
+            sx={{
+              position: 'absolute',
+              left: `${left}px`,
               transform: 'translateX(-50%)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              height: '100%',
             }}
           >
-            {/* Texto para Marcadores Principais */}
-            {isMajorMarker && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.secondary,
-                  fontWeight: 'bold',
-                }}
-              >
-                {zoom >= 3
-                  ? `${(marker * 1000).toFixed(0)}ms` // Exibe em milissegundos
-                  : `${marker.toFixed(0)}s`} {/* Indicador de Tempo Atual */}
-              </Typography>
-            )}
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              {marker % 1 === 0 ? `${marker}s` : `${(marker * 1000).toFixed(0)}ms`}
+            </Typography>
             <Box
               sx={{
-                height: isMajorMarker ? '50px' : '25px',
-                width: '2px',
-                backgroundColor: theme.palette.text.disabled,
+                width: '1px',
+                height: '20px',
+                backgroundColor: theme.palette.text.secondary,
               }}
             />
           </Box>
         );
       })}
 
-      {/* Indicador de Tempo Atual */}
-      {duration > 0 && (
+      {/* Indicador (Playhead) */}
+      <Box
+        sx={{
+          position: 'absolute',
+          left: `${currentTimePosition}px`,
+          top: 0,
+          bottom: 0,
+          width: '2px',
+          backgroundColor: theme.palette.primary.main,
+          cursor: 'grab',
+        }}
+        onMouseDown={handleMouseDown}
+      >
+        {/* Bolinha/Handle */}
         <Box
           sx={{
             position: 'absolute',
-            left: `${currentTimePosition}px`,
-            top: 0,
-            bottom: 0,
-            width: '2px',
+            left: '-5px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
             backgroundColor: theme.palette.primary.main,
-            boxShadow: `0 0 4px ${theme.palette.primary.main}`,
           }}
         />
-      )}
+      </Box>
     </Box>
   );
 });

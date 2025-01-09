@@ -1,38 +1,38 @@
 import React from 'react';
 import ReactPlayer from 'react-player';
-import withThemeStyle from '../../../utils/withThemeStyle';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 
-const VideoPlayer = ({ url, width = '100%', height = 'auto', theme, ...props }) => {
+/**
+ * Exemplo de componente Player SEM controles nativos e SEM toggles internos
+ */
+const VideoPlayer = ({
+  url,
+  playing,
+  onProgress,
+  onEnded,
+}) => {
   return (
     <Box
       sx={{
-        borderRadius: '0px', // Bordas retas
-        overflow: 'hidden',
-        backgroundColor: theme.palette.background.paper,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: width,
-        height: height,
+        // Se quiser impedir completamente cliques no vídeo:
+        pointerEvents: 'none'
       }}
     >
-      {url ? (
-        <ReactPlayer
-          url={url}
-          width="80%"
-          height="80%"
-          controls
-          {...props}
-          style={{ borderRadius: '0px' }} // Bordas retas para o player interno
-        />
-      ) : (
-        <Typography variant="body1" color="text.secondary">
-          Nenhum vídeo carregado
-        </Typography>
-      )}
+      <ReactPlayer
+        url={url}
+        playing={playing}
+        controls={false}   // Remove barra nativa
+        onProgress={onProgress}
+        onEnded={onEnded}
+        width="100%"
+        height="100%"
+        // Impede que ReactPlayer trate play/pause internamente
+        // (esses eventos deixam de atrapalhar):
+        onPlay={() => {}}
+        onPause={() => {}}
+      />
     </Box>
   );
 };
 
-export default withThemeStyle(VideoPlayer);
+export default VideoPlayer;
