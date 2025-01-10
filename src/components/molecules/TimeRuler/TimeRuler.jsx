@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import throttle from 'lodash/throttle';
 
@@ -16,8 +16,9 @@ const TimeRuler = React.memo(({
 
   const throttledScrub = useRef(
     throttle((time) => {
+      console.log('Scrubbing to:', time); // Debugging
       onScrub?.(time);
-    }, 80)
+    }, 10000) // Intervalo ajustado
   ).current;
 
   const markerInterval = useMemo(() => {
@@ -27,26 +28,20 @@ const TimeRuler = React.memo(({
     return 10;
   }, [zoom]);
 
+  // Define os markers (marcadores principais) baseados na duração e no intervalo
   const markers = useMemo(() => {
     if (duration <= 0) return [];
-    const num = Math.ceil(duration / markerInterval);
-    return Array.from({ length: num + 1 }, (_, i) => i * markerInterval);
+    const numMarkers = Math.ceil(duration / markerInterval);
+    return Array.from({ length: numMarkers + 1 }, (_, i) => i * markerInterval);
   }, [duration, markerInterval]);
 
-  const minorTickInterval = markerInterval / 10;
-  const minorTicks = useMemo(() => {
-    if (duration <= 0 || minorTickInterval <= 0) return [];
-    const numTicks = Math.ceil(duration / minorTickInterval);
-    return Array.from({ length: numTicks + 1 }, (_, i) => i * minorTickInterval);
-  }, [duration, minorTickInterval]);
-
-  const calcTimeFromX = (clientX) => {
+  const calcTimeFromX = useCallback((clientX) => {
     if (!rulerRef.current || duration <= 0) return 0;
     const rect = rulerRef.current.getBoundingClientRect();
     const relativeX = clientX - rect.left;
     const clampedX = Math.max(0, Math.min(relativeX, boxWidth));
     return (clampedX / boxWidth) * duration;
-  };
+  }, [boxWidth, duration]);
 
   const currentTimePosition = useMemo(() => {
     if (isDragging) return dragX;
@@ -56,28 +51,32 @@ const TimeRuler = React.memo(({
     return 0;
   }, [isDragging, dragX, currentTime, duration, boxWidth]);
 
-  const handleClick = (e) => {
-    if (!onScrub) return;
-    const newTime = calcTimeFromX(e.clientX);
-    onScrub(newTime);
-  };
-
-  const handleMouseDown = (e) => {
-    e.stopPropagation();
-    setIsDragging(true);
-    setDragX(e.clientX - rulerRef.current.getBoundingClientRect().left);
-  };
-
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     if (!isDragging) return;
     const newX = e.clientX - rulerRef.current.getBoundingClientRect().left;
     setDragX(newX);
-    throttledScrub(calcTimeFromX(e.clientX));
-  };
+    const newTime = calcTimeFromX(e.clientX);
 
-  const handleMouseUp = () => {
+    // Só emite evento se o valor for diferente
+    if (Math.abs(newTime - currentTime) > 0.1) {
+      throttledScrub(newTime);
+    }
+  }, [isDragging, calcTimeFromX, throttledScrub, currentTime]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    const newX = e.clientX - rulerRef.current.getBoundingClientRect().left;
+    setDragX(newX);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging) return;
     setIsDragging(false);
-  };
+    const newTime = calcTimeFromX(dragX);
+    console.log('Drag ended at time:', newTime); // Debugging
+    onScrub?.(newTime);
+  }, [isDragging, calcTimeFromX, dragX, onScrub]);
 
   return (
     <Box
@@ -86,7 +85,6 @@ const TimeRuler = React.memo(({
         position: 'relative',
         width: `${boxWidth}px`,
         height: '50px',
-        // Gradiente sutil
         background: `linear-gradient(90deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
         borderBottom: `1px solid ${theme.palette.divider}`,
         display: 'flex',
@@ -95,29 +93,14 @@ const TimeRuler = React.memo(({
         userSelect: 'none',
         boxShadow: theme.shadows[2],
       }}
-      onClick={handleClick}
-      onMouseMove={handleMouseMove}
+      onMouseMove={isDragging ? handleMouseMove : undefined}
       onMouseUp={handleMouseUp}
+      onClick={(e) => {
+        const newTime = calcTimeFromX(e.clientX);
+        console.log('Clicked at time:', newTime); // Debugging
+        onScrub?.(newTime);
+      }}
     >
-      {/* Minor ticks */}
-      {minorTicks.map((tick) => {
-        const left = (tick / duration) * boxWidth;
-        return (
-          <Box
-            key={`minor-${tick}`}
-            sx={{
-              position: 'absolute',
-              left: `${left}px`,
-              height: '8px',
-              width: '1px',
-              bottom: 10,
-              backgroundColor: theme.palette.divider,
-              transform: 'translateX(-50%)',
-            }}
-          />
-        );
-      })}
-
       {/* Major markers */}
       {markers.map((marker) => {
         const left = (marker / duration) * boxWidth;
@@ -147,7 +130,6 @@ const TimeRuler = React.memo(({
         );
       })}
 
-      {/* Indicador (Playhead) */}
       <Box
         sx={{
           position: 'absolute',
@@ -160,7 +142,6 @@ const TimeRuler = React.memo(({
         }}
         onMouseDown={handleMouseDown}
       >
-        {/* Bolinha/Handle */}
         <Box
           sx={{
             position: 'absolute',

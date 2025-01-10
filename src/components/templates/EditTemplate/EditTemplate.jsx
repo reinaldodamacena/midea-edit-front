@@ -1,17 +1,19 @@
-// src/components/templates/EditTemplate/EditTemplate.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Grid, Box, Typography } from '@mui/material';
 import Sidebar from '../../organisms/Sidebar/Sidebar';
 import TimelinePanel from '../../organisms/TimelinePanel/TimelinePanel';
 import DoubleBufferPlayer from '../../molecules/DoubleBufferPlayer/DoubleBufferPlayer';
 
 const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cuts }) => {
-  // Em vez de usar 'videos' direto, guardamos no state para reorder
-  const [videos, setVideos] = useState(initialVideos);
-
+  const [videos, setVideos] = useState(initialVideos || []);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [zoom, setZoom] = useState(50);
+  const [zoom, setZoom] = useState(2);
+
+  // Sincronizar estado interno com as props quando `initialVideos` mudar
+  useEffect(() => {
+    setVideos(initialVideos || []);
+  }, [initialVideos]);
 
   const totalDuration = videos.reduce((acc, v) => acc + (v.duration || 0), 0);
 
@@ -41,7 +43,6 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
     setCurrentTime(0);
   };
 
-  // callback: reorder (chega do DraggableTimeline -> TimelinePanel)
   const handleReorder = (newList) => {
     setVideos(newList);
   };
@@ -68,11 +69,7 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
           flexDirection: 'column',
         }}
       >
-        <Sidebar
-          videos={videos}
-          onSelectVideo={onSelectVideo}
-          onDeleteVideo={onDeleteVideo}
-        />
+        <Sidebar videos={videos} onSelectVideo={onSelectVideo} onDeleteVideo={onDeleteVideo} />
       </Grid>
 
       {/* Área principal */}
@@ -126,12 +123,7 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
         </Box>
 
         {/* Timeline */}
-        <Box
-          sx={{
-            flex: 0,
-            p: 1,
-          }}
-        >
+        <Box sx={{ flex: 0, p: 1 }}>
           <TimelinePanel
             videos={videos}
             cuts={cuts}
@@ -142,7 +134,7 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
             onPause={handlePause}
             onChangeZoom={setZoom}
             onUpdateTime={handleUpdateTime}
-            onReorder={handleReorder} 
+            onReorder={handleReorder}
           />
         </Box>
       </Grid>

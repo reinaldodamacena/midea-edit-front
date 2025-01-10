@@ -42,11 +42,11 @@ const SortableClip = ({ video, width }) => {
           backgroundColor: theme.palette.background.default,
         }}
       >
-        <VideoFrames
+        {/* <VideoFrames
           videoUrl={video.url}
           zoom={width / 100} // Ajusta zoom proporcionalmente
           boxWidth={width} // Largura calculada do clipe
-        />
+        /> */}
       </Box>
 
       {/* Nome do clipe */}

@@ -1,10 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 
-/**
- * DoubleBufferPlayer
- * Evita flicker ao trocar de vídeos, usando 2 ReactPlayers.
- */
 const DoubleBufferPlayer = ({
   videos = [],
   currentTime = 0,
@@ -26,9 +22,15 @@ const DoubleBufferPlayer = ({
 
   const totalDuration = videos.reduce((acc, v) => acc + (v.duration || 0), 0);
 
-  // Verifica se chegou ao final de tudo
+  // Monitorando o estado do player
+  console.log('Current Time:', currentTime);
+  console.log('Visible Player:', visiblePlayer);
+  console.log('Player A Index:', playerAIndex, 'Player B Index:', playerBIndex);
+
+  // Verifica se chegou ao final
   useEffect(() => {
     if (currentTime >= totalDuration && totalDuration > 0) {
+      console.log('Playback ended');
       onEndedAll?.();
     }
   }, [currentTime, totalDuration, onEndedAll]);
@@ -46,12 +48,13 @@ const DoubleBufferPlayer = ({
     return [videos.length - 1, 0];
   })();
 
-  // Ao mudar activeIndex, inverte o player visível
+  // Atualiza o player visível
   useEffect(() => {
     setVisiblePlayer((prev) => (prev === 'A' ? 'B' : 'A'));
+    console.log('Switched to Player:', visiblePlayer === 'A' ? 'B' : 'A');
   }, [activeIndex]);
 
-  // Ajusta player A e B
+  // Ajusta players
   useEffect(() => {
     const nextIndex = activeIndex + 1 < videos.length ? activeIndex + 1 : activeIndex;
     if (visiblePlayer === 'A') {
@@ -70,45 +73,39 @@ const DoubleBufferPlayer = ({
   const urlA = playerAIndex < videos.length ? videos[playerAIndex].url : null;
   const urlB = playerBIndex < videos.length ? videos[playerBIndex].url : null;
 
-  // Sincroniza localTime com o player real
+  // Sincroniza tempos locais
   useEffect(() => {
     if (visiblePlayer === 'A' && playerARef.current) {
       const actual = playerARef.current.getCurrentTime?.() || 0;
       if (Math.abs(actual - localTimeA) > 0.25) {
+        console.log('Seeking Player A to:', localTimeA);
         playerARef.current.seekTo(localTimeA, 'seconds');
       }
     } else if (visiblePlayer === 'B' && playerBRef.current) {
       const actual = playerBRef.current.getCurrentTime?.() || 0;
       if (Math.abs(actual - localTimeB) > 0.25) {
+        console.log('Seeking Player B to:', localTimeB);
         playerBRef.current.seekTo(localTimeB, 'seconds');
       }
     }
   }, [visiblePlayer, localTimeA, localTimeB]);
 
-  // handleProgress => emite tempo global
+  // Progresso dos players
   const handleProgressA = (prog) => {
     if (visiblePlayer === 'A') {
       const sumPrev = videos.slice(0, playerAIndex).reduce((s, v) => s + (v.duration || 0), 0);
       const globalTime = sumPrev + prog.playedSeconds;
-      onProgress?.(globalTime);
-    }
-  };
-  const handleProgressB = (prog) => {
-    if (visiblePlayer === 'B') {
-      const sumPrev = videos.slice(0, playerBIndex).reduce((s, v) => s + (v.duration || 0), 0);
-      const globalTime = sumPrev + prog.playedSeconds;
+      console.log('Progress Player A:', globalTime);
       onProgress?.(globalTime);
     }
   };
 
-  const handleEndedA = () => {
-    if (visiblePlayer === 'A') {
-      // (seu pai ajusta currentTime ou onEndedAll)
-    }
-  };
-  const handleEndedB = () => {
+  const handleProgressB = (prog) => {
     if (visiblePlayer === 'B') {
-      // ...
+      const sumPrev = videos.slice(0, playerBIndex).reduce((s, v) => s + (v.duration || 0), 0);
+      const globalTime = sumPrev + prog.playedSeconds;
+      console.log('Progress Player B:', globalTime);
+      onProgress?.(globalTime);
     }
   };
 
@@ -120,9 +117,8 @@ const DoubleBufferPlayer = ({
       width: '100%',
       height: '100%',
       borderRadius: '6px',
-      overflow: 'hidden', // bordas suaves
-      boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
-      backgroundColor: '#000', // para garantir fundo escuro
+      overflow: 'hidden',
+      backgroundColor: '#000',
     }}>
       {/* Player A */}
       <div style={{
@@ -139,7 +135,6 @@ const DoubleBufferPlayer = ({
             playing={isPlaying && visiblePlayer === 'A'}
             controls={false}
             onProgress={handleProgressA}
-            onEnded={handleEndedA}
             width="100%"
             height="100%"
             {...props}
@@ -162,7 +157,6 @@ const DoubleBufferPlayer = ({
             playing={isPlaying && visiblePlayer === 'B'}
             controls={false}
             onProgress={handleProgressB}
-            onEnded={handleEndedB}
             width="100%"
             height="100%"
             {...props}

@@ -90,7 +90,7 @@ const DraggableTimeline = ({
       />
 
       {/* Lista de vídeos com DnD */}
-      <DndContext
+      {/* <DndContext
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
@@ -108,15 +108,18 @@ const DraggableTimeline = ({
             }}
           >
             {videos.map((video, idx) => (
+              
               <SortableClip
-                key={video.id}
-                video={video}
-                width={videoWidths[idx]} // Calcula largura proporcional
-              />
+              key={`${video.id}-${idx}`} // Combina id com índice para unicidade
+              video={video}
+              width={videoWidths[idx]} // Calcula largura proporcional
+            />
+            
             ))}
+            
           </Box>
         </SortableContext>
-      </DndContext>
+      </DndContext> */}
     </Box>
   );
 };
