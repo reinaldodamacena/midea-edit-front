@@ -39,7 +39,7 @@ const DraggableTimeline = ({
   // Largura total da timeline
   const totalWidth = useMemo(() => {
     if (totalDuration <= 0) return 0;
-    return totalDuration * normalizedZoom * 100;
+    return totalDuration * normalizedZoom * 10;
   }, [totalDuration, normalizedZoom]);
 
   // Larguras individuais dos vídeos
@@ -51,21 +51,21 @@ const DraggableTimeline = ({
     });
   }, [videos, totalDuration, totalWidth]);
 
-  // IDs para o DnD
-  const itemIds = useMemo(() => videos.map((v) => v.id.toString()), [videos]);
+  // // IDs para o DnD
+  // const itemIds = useMemo(() => videos.map((v) => v.id.toString()), [videos]);
 
-  // Handler para reordenação
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-    if (!over) return;
-    if (active.id === over.id) return;
+  // // Handler para reordenação
+  // const handleDragEnd = (event) => {
+  //   const { active, over } = event;
+  //   if (!over) return;
+  //   if (active.id === over.id) return;
 
-    const oldIndex = videos.findIndex((v) => v.id.toString() === active.id);
-    const newIndex = videos.findIndex((v) => v.id.toString() === over.id);
+  //   const oldIndex = videos.findIndex((v) => v.id.toString() === active.id);
+  //   const newIndex = videos.findIndex((v) => v.id.toString() === over.id);
 
-    const newList = arrayMove(videos, oldIndex, newIndex);
-    onReorder?.(newList);
-  };
+  //   const newList = arrayMove(videos, oldIndex, newIndex);
+  //   onReorder?.(newList);
+  // };
 
   return (
     <Box

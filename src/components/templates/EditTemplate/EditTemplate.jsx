@@ -6,16 +6,15 @@ import DoubleBufferPlayer from '../../molecules/DoubleBufferPlayer/DoubleBufferP
 
 const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cuts }) => {
   const [videos, setVideos] = useState(initialVideos || []);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0); // Tempo atual
   const [isPlaying, setIsPlaying] = useState(false);
-  const [zoom, setZoom] = useState(2);
+  const [zoom, setZoom] = useState(7); // Zoom inicial (7%)
+  const totalDuration = videos.reduce((acc, v) => acc + (v.duration || 0), 0); // Duração total
 
   // Sincronizar estado interno com as props quando `initialVideos` mudar
   useEffect(() => {
     setVideos(initialVideos || []);
   }, [initialVideos]);
-
-  const totalDuration = videos.reduce((acc, v) => acc + (v.duration || 0), 0);
 
   const handlePlay = () => setIsPlaying(true);
   const handlePause = () => setIsPlaying(false);
@@ -35,6 +34,7 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
       setCurrentTime(totalDuration);
     } else {
       setCurrentTime(globalTime);
+      console.log(globalTime);
     }
   };
 
@@ -69,7 +69,7 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
           flexDirection: 'column',
         }}
       >
-        <Sidebar videos={videos} onSelectVideo={onSelectVideo} onDeleteVideo={onDeleteVideo} />
+        {/* <Sidebar videos={videos} onSelectVideo={onSelectVideo} onDeleteVideo={onDeleteVideo} /> */}
       </Grid>
 
       {/* Área principal */}
@@ -113,7 +113,7 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
                 videos={videos}
                 currentTime={currentTime}
                 isPlaying={isPlaying}
-                onProgress={handleProgress}
+                onProgress={handleProgress} // Atualiza o tempo da timeline
                 onEndedAll={handleEndedAll}
                 width="100%"
                 height="100%"
@@ -126,14 +126,13 @@ const EditTemplate = ({ videos: initialVideos, onSelectVideo, onDeleteVideo, cut
         <Box sx={{ flex: 0, p: 1 }}>
           <TimelinePanel
             videos={videos}
-            cuts={cuts}
-            currentTime={currentTime}
+            currentTime={currentTime} // Tempo atual
             zoom={zoom}
             isPlaying={isPlaying}
             onPlay={handlePlay}
             onPause={handlePause}
             onChangeZoom={setZoom}
-            onUpdateTime={handleUpdateTime}
+            onUpdateTime={handleUpdateTime} // Atualiza o tempo do player
             onReorder={handleReorder}
           />
         </Box>

@@ -1,162 +1,195 @@
-import React, { useRef, useState, useMemo, useCallback } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import React, { useRef, useState, useMemo, useCallback, useEffect } from 'react';
+import { Box } from '@mui/material';
 import throttle from 'lodash/throttle';
+import Cursor from '../../atoms/Cursor/Cursor';
 
-const TimeRuler = React.memo(({
-  duration = 0,
-  zoom = 50,
-  currentTime = 0,
-  boxWidth = 600,
-  onScrub,
+const TimeRuler = ({
+  duration = 0, // Duração total em segundos
+  zoom = 50, // Controle de zoom (em %)
+  currentTime = 0, // Tempo atual em segundos
+  boxWidth = 600, // Largura visível da timeline
+  onScrub, // Callback para scrub na timeline
 }) => {
-  const theme = useTheme();
+  const canvasRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragX, setDragX] = useState(0);
-  const rulerRef = useRef(null);
+  const [scrollOffset, setScrollOffset] = useState(0); // Posição do scroll
 
-  const throttledScrub = useRef(
-    throttle((time) => {
-      console.log('Scrubbing to:', time); // Debugging
-      onScrub?.(time);
-    }, 10000) // Intervalo ajustado
-  ).current;
-
-  const markerInterval = useMemo(() => {
-    if (zoom >= 75) return 0.5;
-    if (zoom >= 50) return 1;
-    if (zoom >= 25) return 5;
-    return 10;
+  // Pixels por segundo ajustados pelo zoom
+  const pixelsPerSecond = useMemo(() => {
+    const basePixelsPerSecond = 10; // Pixels por segundo no zoom base (100%)
+    return basePixelsPerSecond * (zoom / 100); // Ajuste com base no zoom
   }, [zoom]);
 
-  // Define os markers (marcadores principais) baseados na duração e no intervalo
-  const markers = useMemo(() => {
-    if (duration <= 0) return [];
-    const numMarkers = Math.ceil(duration / markerInterval);
-    return Array.from({ length: numMarkers + 1 }, (_, i) => i * markerInterval);
-  }, [duration, markerInterval]);
+  // Intervalo de marcadores
+  const markerInterval = useMemo(() => {
+    const markerSpacing = 50; // Espaçamento mínimo entre marcadores em pixels
+    const spacingInSeconds = markerSpacing / pixelsPerSecond;
 
-  const calcTimeFromX = useCallback((clientX) => {
-    if (!rulerRef.current || duration <= 0) return 0;
-    const rect = rulerRef.current.getBoundingClientRect();
-    const relativeX = clientX - rect.left;
-    const clampedX = Math.max(0, Math.min(relativeX, boxWidth));
-    return (clampedX / boxWidth) * duration;
-  }, [boxWidth, duration]);
+    // Garantir uma densidade mínima de marcadores
+    const minMarkersOnScreen = 10; // Mínimo de 10 marcadores visíveis
+    const maxInterval = duration / minMarkersOnScreen;
 
+    return Math.min(maxInterval, Math.ceil(spacingInSeconds / 10) * 10); // Ajuste dinâmico
+  }, [pixelsPerSecond, duration]);
+
+  // Renderizar os marcadores no Canvas
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || pixelsPerSecond <= 0) return;
+
+    const ctx = canvas.getContext('2d');
+    const visibleWidth = boxWidth; // Apenas a largura visível
+    const canvasHeight = 60;
+
+    canvas.width = visibleWidth;
+    canvas.height = canvasHeight;
+
+    const visibleStartTime = scrollOffset / pixelsPerSecond;
+    const visibleEndTime = (scrollOffset + visibleWidth) / pixelsPerSecond;
+
+    ctx.clearRect(0, 0, visibleWidth, canvasHeight);
+
+    ctx.fillStyle = '#FFF';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = 'gray';
+
+    for (
+      let time = Math.max(0, Math.floor(visibleStartTime / markerInterval) * markerInterval);
+      time <= Math.min(duration, visibleEndTime);
+      time += markerInterval
+    ) {
+      const position = (time * pixelsPerSecond) - scrollOffset;
+
+      // Desenho de marcadores principais
+      ctx.beginPath();
+      ctx.moveTo(position, 20);
+      ctx.lineTo(position, canvasHeight);
+      ctx.stroke();
+
+      // Função para formatar o tempo em "MM:SS"
+      const formatTimeLabel = (timeInSeconds) => {
+        const minutes = Math.floor(timeInSeconds / 60); // Calcular minutos
+        const seconds = timeInSeconds % 60; // Calcular segundos restantes
+        return `${minutes}:${String(seconds).padStart(2, '0')}`; // Formatar para "MM:SS"
+      };
+
+      // Renderizar texto do marcador principal
+      const label = formatTimeLabel(time); // Obter o rótulo formatado
+      ctx.fillText(label, position, 10); // Desenhar o rótulo no canvas
+
+
+      // Adicionar subdivisões (marcadores menores)
+      const subInterval = markerInterval / 4; // Exemplo: 4 subdivisões por intervalo
+      for (let subTime = time + subInterval; subTime < time + markerInterval; subTime += subInterval) {
+        const subPosition = (subTime * pixelsPerSecond) - scrollOffset;
+        ctx.beginPath();
+        ctx.moveTo(subPosition, 40); // Marcadores menores
+        ctx.lineTo(subPosition, canvasHeight);
+        ctx.stroke();
+      }
+    }
+  }, [scrollOffset, pixelsPerSecond, markerInterval, duration, boxWidth]);
+
+  // Calcular tempo a partir da posição X do mouse
+  const calcTimeFromX = useCallback(
+    (clientX) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect || pixelsPerSecond <= 0) return 0;
+      const relativeX = clientX - rect.left + scrollOffset;
+      return Math.max(0, Math.min(relativeX / pixelsPerSecond, duration));
+    },
+    [pixelsPerSecond, scrollOffset, duration]
+  );
+
+  // Posição do cursor com base no tempo atual
   const currentTimePosition = useMemo(() => {
-    if (isDragging) return dragX;
-    if (duration > 0) {
-      return (currentTime / duration) * boxWidth;
-    }
-    return 0;
-  }, [isDragging, dragX, currentTime, duration, boxWidth]);
+    return Math.max(0, Math.min(currentTime * pixelsPerSecond - scrollOffset, boxWidth));
+  }, [currentTime, pixelsPerSecond, scrollOffset, boxWidth]);
 
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging) return;
-    const newX = e.clientX - rulerRef.current.getBoundingClientRect().left;
-    setDragX(newX);
-    const newTime = calcTimeFromX(e.clientX);
-
-    // Só emite evento se o valor for diferente
-    if (Math.abs(newTime - currentTime) > 0.1) {
-      throttledScrub(newTime);
-    }
-  }, [isDragging, calcTimeFromX, throttledScrub, currentTime]);
-
+  // Manipuladores de eventos
   const handleMouseDown = useCallback((e) => {
-    e.stopPropagation();
+    e.preventDefault();
     setIsDragging(true);
-    const newX = e.clientX - rulerRef.current.getBoundingClientRect().left;
-    setDragX(newX);
-  }, []);
+    const newTime = calcTimeFromX(e.clientX);
+    onScrub?.(newTime);
+  }, [calcTimeFromX, onScrub]);
+
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!isDragging) return;
+      const newTime = calcTimeFromX(e.clientX);
+      onScrub?.(newTime);
+    },
+    [isDragging, calcTimeFromX, onScrub]
+  );
 
   const handleMouseUp = useCallback(() => {
-    if (!isDragging) return;
     setIsDragging(false);
-    const newTime = calcTimeFromX(dragX);
-    console.log('Drag ended at time:', newTime); // Debugging
-    onScrub?.(newTime);
-  }, [isDragging, calcTimeFromX, dragX, onScrub]);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  const handleScroll = useCallback((e) => {
+    setScrollOffset(e.target.scrollLeft);
+  }, []);
+    // Manipular eventos de teclado para mover o marcador
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key === 'ArrowRight') {
+          const newTime = Math.min(currentTime + 15, duration);
+          onScrub?.(newTime);
+        } else if (e.key === 'ArrowLeft') {
+          const newTime = Math.max(currentTime - 15, 0);
+          onScrub?.(newTime);
+        }
+      };
+  
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [currentTime, duration, onScrub]);
 
   return (
     <Box
-      ref={rulerRef}
       sx={{
         position: 'relative',
         width: `${boxWidth}px`,
-        height: '50px',
-        background: `linear-gradient(90deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
-        borderBottom: `1px solid ${theme.palette.divider}`,
-        display: 'flex',
-        alignItems: 'center',
-        cursor: 'pointer',
-        userSelect: 'none',
-        boxShadow: theme.shadows[2],
+        height: '61px',
+        background: '#1e1e1e',
+        borderBottom: '1px solid #444',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
       }}
-      onMouseMove={isDragging ? handleMouseMove : undefined}
-      onMouseUp={handleMouseUp}
-      onClick={(e) => {
-        const newTime = calcTimeFromX(e.clientX);
-        console.log('Clicked at time:', newTime); // Debugging
-        onScrub?.(newTime);
-      }}
+      onScroll={handleScroll}
+      onMouseDown={handleMouseDown} // Permitir iniciar o arraste ao clicar em qualquer lugar
     >
-      {/* Major markers */}
-      {markers.map((marker) => {
-        const left = (marker / duration) * boxWidth;
-        return (
-          <Box
-            key={`major-${marker}`}
-            sx={{
-              position: 'absolute',
-              left: `${left}px`,
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-              {marker % 1 === 0 ? `${marker}s` : `${(marker * 1000).toFixed(0)}ms`}
-            </Typography>
-            <Box
-              sx={{
-                width: '1px',
-                height: '20px',
-                backgroundColor: theme.palette.text.secondary,
-              }}
-            />
-          </Box>
-        );
-      })}
-
-      <Box
-        sx={{
+      <canvas
+        ref={canvasRef}
+        style={{
           position: 'absolute',
-          left: `${currentTimePosition}px`,
           top: 0,
-          bottom: 0,
-          width: '2px',
-          backgroundColor: theme.palette.primary.main,
-          cursor: 'grab',
+          left: 0,
+          height: '100%',
+          backgroundColor: '#333',
         }}
-        onMouseDown={handleMouseDown}
-      >
-        <Box
-          sx={{
-            position: 'absolute',
-            left: '-5px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: theme.palette.primary.main,
-          }}
-        />
-      </Box>
+      />
+      <Cursor position={currentTimePosition} />
     </Box>
   );
-});
+};
 
 export default TimeRuler;
